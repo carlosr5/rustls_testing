@@ -1,9 +1,39 @@
-[workspace]
-members = [
-  # tests and example code
-  "examples",
-  # the main library and tests
-  "rustls",
-]
-exclude = ["admin/rustfmt"]
-resolver = "2"
+[package]
+name = "rustls_benchmarking"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rustls = "0.21.1"
+rustls-platform-verifier = { version = "0.1.0", path = "C:\\Users\\t-caramirez\\Desktop\\Learning Rust\\rustls-platform-verifier-main" }
+log = { version = "0.4.4", optional = true }
+ring = "0.16.20"
+sct = "0.7.0"
+webpki = { package = "rustls-webpki", version = "0.100.0", features = ["alloc", "std"] }
+docopt = "~1.1"
+env_logger = "0.9.0" # 0.10 requires an MSRV bump to 1.60
+mio = { version = "0.8", features = ["net", "os-poll"] }
+envy = "0.4.2"
+rustls-pemfile = "1.0.0"
+serde = "1.0"
+serde_derive = "1.0"
+webpki-roots = "0.23"
+
+[dev-dependencies]
+env_logger = "0.9.0" # 0.10 requires an MSRV bump to 1.60
+log = "0.4.4"
+webpki-roots = "0.23.0"
+rustls-pemfile = "1.0.0"
+base64 = "0.21"
+criterion = "0.3"
+docopt = "~1.1"
+mio = { version = "0.8", features = ["net", "os-poll"] }
+serde = "1.0"
+serde_derive = "1.0"
+
+[[bench]]
+name = "benchmarks"
+path = "benches/rustls_benchmarks.rs"
+harness = false
