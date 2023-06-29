@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use mio::net::TcpStream;
 
+use rustls_benchmarking::start_client;
 use rustls_platform_verifier::tls_config;
 
 use std::fs;
@@ -458,65 +459,48 @@ fn make_config(args: &Args) -> Arc<rustls::ClientConfig> {
     Arc::new(config)
 }
 
+#[derive(Deserialize, Debug)]
+pub struct BenchArgs {
+    port: Option<u16>,
+    http: Option<bool>,
+    verbose: Option<bool>,
+    protover: Option<Vec<String>>,
+    suite: Option<Vec<String>>,
+    proto: Option<Vec<String>>,
+    max_frag_size: Option<usize>,
+    cafile: Option<String>,
+    no_tickets: Option<bool>,
+    no_sni: Option<bool>,
+    insecure: Option<bool>,
+    auth_key: Option<String>,
+    auth_certs: Option<String>,
+    arg_hostname: String,
+}
+
+impl BenchArgs {
+    /// Returns a new instance of BenchArgs with default values set.
+    pub fn with_defaults(self) -> Self {
+        Self {
+            port: Some(self.port.unwrap_or(443)),
+            http: Some(self.http.unwrap_or(false)),
+            verbose: Some(self.verbose.unwrap_or(false)),
+            protover: Some(self.protover.unwrap_or(Vec::new())),
+            suite: Some(self.suite.unwrap_or(Vec::new())),
+            proto: Some(self.proto.unwrap_or(Vec::new())),
+            // Setting an arbitrary default value for max_frag_size for now
+            max_frag_size: Some(self.max_frag_size.unwrap_or(12345)),
+            cafile: self.cafile,  // keeping as is, not sure if a default is required
+            no_tickets: Some(self.no_tickets.unwrap_or(false)),
+            no_sni: Some(self.no_sni.unwrap_or(false)),
+            insecure: Some(self.insecure.unwrap_or(false)),
+            auth_key: self.auth_key,  // keeping as is, not sure if a default is required
+            auth_certs: self.auth_certs,  // keeping as is, not sure if a default is required
+            arg_hostname: self.arg_hostname,
+        }
+    }
+}
 /// Parse some arguments, then make a TLS client connection
 /// somewhere.
 fn main() {
-    let version = env!("CARGO_PKG_NAME").to_string() + ", version: " + env!("CARGO_PKG_VERSION");
-
-    let args: Args = Docopt::new(USAGE)
-        .map(|d| d.help(true))
-        .map(|d| d.version(Some(version)))
-        .and_then(|d| d.deserialize())
-        .unwrap_or_else(|e| e.exit());
-
-    if args.flag_verbose {
-        env_logger::Builder::new()
-            .parse_filters("trace")
-            .init();
-    }
-
-    let port = args.flag_port.unwrap_or(443);
-    let addr = lookup_ipv4(args.arg_hostname.as_str(), port);
-
-    // let config = make_config(&args);
-    let config = Arc::new(tls_config());
-
-    let sock = TcpStream::connect(addr).unwrap();
-    let server_name = args
-        .arg_hostname
-        .as_str()
-        .try_into()
-        .expect("invalid DNS name");
-    let mut tlsclient = TlsClient::new(sock, server_name, config);
-
-    if args.flag_http {
-        let httpreq = format!(
-            "GET / HTTP/1.0\r\nHost: {}\r\nConnection: \
-                               close\r\nAccept-Encoding: identity\r\n\r\n",
-            args.arg_hostname
-        );
-        tlsclient
-            .write_all(httpreq.as_bytes())
-            .unwrap();
-    } else {
-        // let mut stdin = io::stdin();
-        tlsclient
-            .read_source_to_end("Hello world!")
-            .unwrap();
-    }
-
-    let mut poll = mio::Poll::new().unwrap();
-    let mut events = mio::Events::with_capacity(32);
-    tlsclient.register(poll.registry());
-
-    // loop {
-        poll.poll(&mut events, None).unwrap();
-
-        for ev in events.iter() {
-            tlsclient.ready(ev);
-            tlsclient.reregister(poll.registry());
-        }
-    // }
-
-    // println!("Exited gracefully!")
+    start_client("rustls-platform-verifier".to_string());
 }

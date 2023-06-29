@@ -1,10 +1,15 @@
 /// The following is utility code for benchmarking a client connection
 mod tlsclient_mio;
 
-use tlsclient_mio::{run_configured_client, run_platform_verifier_client};
+use tlsclient_mio::run_configured_client;
+
+// mod tlsserver_mio;
+
+// use tlsserver_mio::run_configured_server;
+
 use serde::Deserialize;
 
-/// Struct to hold the arguments passed in from the command line..
+/// Struct to hold the arguments passed in from the command line.
 #[derive(Deserialize, Debug)]
 pub struct BenchArgs {
     port: Option<u16>,
@@ -50,29 +55,38 @@ impl BenchArgs {
 /// Takes in a list of arguments to configure the connection.
 /// We need this function in here so that Criterion can find and test this function.
 #[inline]
-pub fn start_client() {
+pub fn start_client(cert_type: String) {
     // First, we'll grab all of the environment variables that we want from the terminal.
     // We'll let the envy crate grab everything for us, and then we'll add some default values.
     let args: BenchArgs = envy::from_env::<BenchArgs>().unwrap().with_defaults();
 
+    //     // // Print every element inside the args struct
+//     // println!("args.port: {:?}", args.port);
+//     // println!("args.http: {:?}", args.http);
+//     // println!("args.verbose: {:?}", args.verbose);
+//     // println!("args.protover: {:?}", args.protover);
+//     // println!("args.suite: {:?}", args.suite);
+//     // println!("args.proto: {:?}", args.proto);
+//     // println!("args.max_frag_size: {:?}", args.max_frag_size);
+//     // println!("args.cafile: {:?}", args.cafile);
+//     // println!("args.no_tickets: {:?}", args.no_tickets);
+//     // println!("args.no_sni: {:?}", args.no_sni);
+//     // println!("args.insecure: {:?}", args.insecure);
+//     // println!("args.auth_key: {:?}", args.auth_key);
+//     // println!("args.auth_certs: {:?}", args.auth_certs);
+//     // println!("args.arg_hostname: {:?}", args.arg_hostname);
+
+
     // Then, we'll pass in the arguments to the tlsclient_mio file to start the client.
-    run_configured_client(args);
+    run_configured_client(args, cert_type);
 }
 
+/// Starts a TLS server that waits for client connections.
+/// Takes in a list of arguments to configure the connection
+/// At the moment, this function isn't implemented yet, but we'll need it for Criterion to be able to run the server from the benchmarking tests.
 #[inline]
-pub fn start_platform_verifier_client() {
-    // First, we'll grab all of the environment variables that we want from the terminal.
-    // We'll let the envy crate grab everything for us, and then we'll add some default values.
+pub fn start_server() {
     let args: BenchArgs = envy::from_env::<BenchArgs>().unwrap().with_defaults();
 
-    // Then, we'll pass in the arguments to the tlsclient_mio file to start the client.
-    run_platform_verifier_client(args);
+    // run_configured_server(args);
 }
-
-// /// Starts a TLS server that waits for client connections.
-// /// Takes in a list of arguments to configure the connection
-// /// At the moment, this function isn't implemented yet, but we'll need it for Criterion to be able to run the server from the benchmarking tests.
-// #[inline]
-// pub fn start_server(args: Vec<String>) {
-
-// }

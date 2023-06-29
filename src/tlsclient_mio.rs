@@ -63,8 +63,9 @@ impl TlsClient {
         }
 
         if self.is_closed() {
-            println!("Connection closed");
-            process::exit(if self.clean_closure { 0 } else { 1 });
+            // println!("Connection closed");
+            // process::exit(if self.clean_closure { 0 } else { 1 });
+            return;
         }
     }
 
@@ -100,7 +101,7 @@ impl TlsClient {
 
             // If we're ready but there's no data: EOF.
             Ok(0) => {
-                println!("EOF");
+                // println!("EOF");
                 self.closing = true;
                 self.clean_closure = true;
                 return;
@@ -132,14 +133,16 @@ impl TlsClient {
                 .reader()
                 .read_exact(&mut plaintext)
                 .unwrap();
-            io::stdout()
-                .write_all(&plaintext)
-                .unwrap();
+            // println!("Printing all the plaintext!");
+            // io::stdout()
+            //     .write_all(&plaintext)
+            //     .unwrap();
         }
 
         // If wethat fails, the peer might have started a clean TLS-level
         // session closure.
         if io_state.peer_has_closed() {
+            // println!("Closing on 143!");
             self.clean_closure = true;
             self.closing = true;
         }
@@ -455,7 +458,7 @@ fn make_config(args: &BenchArgs) -> Arc<rustls::ClientConfig> {
  * 
  * Also, because of BenchArgs having most parameters being wrapped in the Option type, we unwrap them here.
  */
-pub(crate) fn run_configured_client(args: BenchArgs) {
+pub(crate) fn run_configured_client(args: BenchArgs, cert_type: String) {
     if args.verbose.unwrap() {
         env_logger::Builder::new()
             .parse_filters("trace")
@@ -465,7 +468,12 @@ pub(crate) fn run_configured_client(args: BenchArgs) {
     let port = args.port.unwrap_or(443);
     let addr = lookup_ipv4(args.arg_hostname.as_str(), port);
 
-    let config = make_config(&args);
+    // Setting the TLS configuration
+    let config = match cert_type.to_lowercase().as_str() {
+        "webpki" => make_config(&args),
+        "rustls-platform-verifier" => Arc::new(tls_config()),
+        _ => panic!("Invalid cert_type"), // or handle the case when cert_type doesn't match any known types
+    };
 
     let sock = TcpStream::connect(addr).unwrap();
     let server_name = args
@@ -495,60 +503,18 @@ pub(crate) fn run_configured_client(args: BenchArgs) {
     let mut events = mio::Events::with_capacity(32);
     tlsclient.register(poll.registry());
 
-    // We would typically loop this with a true TLS connection, but for the benchmark test we only want to run this code once.
-    poll.poll(&mut events, None).unwrap();
+    loop {
+        poll.poll(&mut events, None).unwrap();
 
-    for ev in events.iter() {
-        tlsclient.ready(ev);
-        tlsclient.reregister(poll.registry());
+        for ev in events.iter() {
+            tlsclient.ready(ev);
+
+            if tlsclient.is_closed() {
+                return;
+            }
+
+            tlsclient.reregister(poll.registry());
+        }
     }
-}
-
-pub(crate) fn run_platform_verifier_client(args: BenchArgs) {
-    if args.verbose.unwrap() {
-        env_logger::Builder::new()
-            .parse_filters("trace")
-            .init();
-    }
-
-    let port = args.port.unwrap_or(443);
-    let addr = lookup_ipv4(args.arg_hostname.as_str(), port);
-
-    let config = Arc::new(tls_config());
-
-    let sock = TcpStream::connect(addr).unwrap();
-    let server_name = args
-        .arg_hostname
-        .as_str()
-        .try_into()
-        .expect("invalid DNS name");
-    let mut tlsclient = TlsClient::new(sock, server_name, config);
-
-    if args.http.unwrap() {
-        let httpreq = format!(
-            "GET / HTTP/1.0\r\nHost: {}\r\nConnection: \
-                               close\r\nAccept-Encoding: identity\r\n\r\n",
-            args.arg_hostname
-        );
-        tlsclient
-            .write_all(httpreq.as_bytes())
-            .unwrap();
-    } else {
-        // Instead of being able to read in a message from the user to send to the client, we're simply sending a "Hello world!" message to the server for testing
-        tlsclient
-            .read_source_to_end("Hello world!")
-            .unwrap();
-    }
-
-    let mut poll = mio::Poll::new().unwrap();
-    let mut events = mio::Events::with_capacity(32);
-    tlsclient.register(poll.registry());
-
-    // We would typically loop this with a true TLS connection, but for the benchmark test we only want to run this code once.
-    poll.poll(&mut events, None).unwrap();
-
-    for ev in events.iter() {
-        tlsclient.ready(ev);
-        tlsclient.reregister(poll.registry());
-    }
+    
 }
