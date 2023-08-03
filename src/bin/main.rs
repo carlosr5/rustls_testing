@@ -4,6 +4,7 @@ use std::sync::Arc;
 use mio::net::TcpStream;
 
 use rustls_benchmarking::start_client;
+// use rustls_benchmarking::start_server;
 use rustls_platform_verifier::tls_config;
 
 use std::fs;
@@ -502,5 +503,10 @@ impl BenchArgs {
 /// Parse some arguments, then make a TLS client connection
 /// somewhere.
 fn main() {
+    // Note: Using custom certs for platform verifier, with them being manually added to our cert store. Have to ask Khang how to do this again so I can write it down and put it in the README
+    // Can verify platform verifier is called by going to Event Viewer -> Application and Services -> Microsoft -> CAPI 2 -> looking for Build/Verify Chain events from rustls_benchmarking.exe
+    // To test, because the server is blocking the client from running, we can try to get this to work with multithreading!
+    
     start_client("rustls-platform-verifier".to_string());
+    // start_client("webpki".to_string());
 }

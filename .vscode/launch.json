@@ -8,8 +8,8 @@
             "program": "${workspaceFolder}/target/debug/rustls_benchmarking.exe",
             "args": ["bench_client_rtts"],
             "cwd": "${workspaceRoot}",
-            // "env": {"HTTP": "false", "PORT": "8443", "CAFILE":"test-ca/rsa/ca.cert", "ARG_HOSTNAME": "localhost", "VERBOSE": "true", "NUM_SAMPLES": "100", "RUST_BACKTRACE": "1"},
-            "env": {"HTTP": "true", "ARG_HOSTNAME": "mozilla-modern.badssl.com", "VERBOSE": "true", "NUM_SAMPLES": "100", "RUST_BACKTRACE": "1"},
+            "env": {"HTTP": "false", "PORT": "8443", "CAFILE":"../rustls/test-ca/rsa/ca.cert", "ARG_HOSTNAME": "localhost", "VERBOSE": "true", "RUST_BACKTRACE": "1"},
+            // "env": {"HTTP": "true", "ARG_HOSTNAME": "mozilla-modern.badssl.com", "VERBOSE": "true", "NUM_SAMPLES": "100", "RUST_BACKTRACE": "1"},
         }
     ]
 }

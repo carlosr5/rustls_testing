@@ -137,6 +137,10 @@ impl TlsClient {
             // io::stdout()
             //     .write_all(&plaintext)
             //     .unwrap();
+
+            // For testing, what I can do is terminate the connection once we've printed everything
+            self.clean_closure = true;
+            self.closing = true;
         }
 
         // If wethat fails, the peer might have started a clean TLS-level
@@ -465,8 +469,22 @@ pub(crate) fn run_configured_client(args: BenchArgs, cert_type: String) {
             .init();
     }
 
-    let port = args.port.unwrap_or(443);
+    let port: u16;
+
+    // Here we'll decide the port based on the run type
+    if cert_type.eq_ignore_ascii_case("webpki") {
+        port = args.webpki_port.unwrap();
+    }
+    else if cert_type.contains("platform") {
+        port = args.platform_port.unwrap();
+    } 
+    else {
+        port = args.port.unwrap();
+    }
+
     let addr = lookup_ipv4(args.arg_hostname.as_str(), port);
+
+    // println!("Starting client on port {:?}", port);
 
     // Setting the TLS configuration
     let config = match cert_type.to_lowercase().as_str() {

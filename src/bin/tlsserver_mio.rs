@@ -9,13 +9,14 @@ use std::io::{BufReader, Read, Write};
 use std::net;
 
 use docopt::Docopt;
+use clap::Arg;
 
 use rustls::server::{
     AllowAnyAnonymousOrAuthenticatedClient, AllowAnyAuthenticatedClient, NoClientAuth,
 };
 use rustls::{self, RootCertStore};
 
-use crate::BenchArgs;
+use rustls_benchmarking::BenchArgs;
 
 // Token for our listening socket.
 const LISTENER: mio::Token = mio::Token(0);
@@ -556,52 +557,68 @@ fn make_config(args: &BenchArgs, run_type: &str) -> Arc<rustls::ServerConfig> {
         rustls::ALL_VERSIONS.to_vec()
     };
 
-    // Here, we'll initialize the certs based on what type of configuration we're using
-    let mut certs: Vec<rustls::Certificate> = Vec::new();
+    let (certs, privkey) = match run_type {
+        "webpki" => (
+            load_certs(args.webpki_certs.as_ref().expect("webpki_certs option missing")),
+            load_private_key(args.webpki_key.as_ref().expect("webpki_key option missing")),
+        ),
+        "rustls-platform-verifier" => (
+            load_certs(args.platform_certs.as_ref().expect("platform_certs option missing")),
+            load_private_key(args.platform_key.as_ref().expect("platform_key option missing")),
+        ),
+        _ => (
+            load_certs(args.certs.as_ref().expect("certs option missing")),
+            load_private_key(args.key.as_ref().expect("key option missing")),
+        ),
+    };
 
-    if run_type.contains("webpki") {
-        certs = load_certs(
-            args.webpki_certs
-                .as_ref()
-                .expect("webpki_certs option missing"),
-        );
-    }
-    if run_type.contains("platform") {
-        certs = load_certs(
-            args.platform_certs
-                .as_ref()
-                .expect("platform_certs option missing"),
-        );
-    }
-    if certs.is_empty() {
-        certs = load_certs(
-            args.certs
-                .as_ref()
-                .expect("certs option missing"),
-        );
-    }
 
-    // Likewise, we'll initialize the private key based on the type of configuration we're using
-    let mut privkey: rustls::PrivateKey = load_private_key(
-        args.key
-            .as_ref()
-            .expect("key option missing"),
-    );
+    // // Here, we'll initialize the certs based on what type of configuration we're using
+    // let mut certs: Vec<rustls::Certificate> = Vec::new();
 
-    if run_type.contains("webpki") {
-        privkey = load_private_key(
-            args.webpki_key
-                .as_ref()
-                .expect("webpki_key option missing"),
-        );
-    }
-    else if run_type.contains("platform") {
-        privkey = load_private_key(
-            args.platform_key
-                .as_ref()
-                .expect("platform_key option missing"),
-        );
-    }
+    // if run_type.contains("webpki") {
+    //     certs = load_certs(
+    //         args.webpki_certs
+    //             .as_ref()
+    //             .expect("webpki_certs option missing"),
+    //     );
+    // }
+    // if run_type.contains("platform") {
+    //     certs = load_certs(
+    //         args.platform_certs
+    //             .as_ref()
+    //             .expect("platform_certs option missing"),
+    //     );
+    // }
+    // if certs.is_empty() {
+    //     certs = load_certs(
+    //         args.certs
+    //             .as_ref()
+    //             .expect("certs option missing"),
+    //     );
+    // }
+
+    // // Likewise, we'll initialize the private key based on the type of configuration we're using
+    // let mut privkey: rustls::PrivateKey = load_private_key(
+    //     args.key
+    //         .as_ref()
+    //         .expect("key option missing"),
+    // );
+
+    // if run_type.contains("webpki") {
+    //     privkey = load_private_key(
+    //         args.webpki_key
+    //             .as_ref()
+    //             .expect("webpki_key option missing"),
+    //     );
+    // }
+    // else if run_type.contains("platform") {
+    //     privkey = load_private_key(
+    //         args.platform_key
+    //             .as_ref()
+    //             .expect("platform_key option missing"),
+    //     );
+    // }
 
     let ocsp = load_ocsp(&args.ocsp);
 
@@ -660,6 +677,8 @@ pub(crate) fn run_configured_server(args: BenchArgs, run_type: &str) {
 
     addr.set_port(port);
 
+    println!("Starting server on port {:?}", port);
+
     let config = make_config(&args, run_type);
 
     let mut listener = TcpListener::bind(addr).expect("cannot listen on port");
@@ -693,4 +712,23 @@ pub(crate) fn run_configured_server(args: BenchArgs, run_type: &str) {
             }
         }
     }
+}
+
+fn main() {
+    let mut cmd = clap::Command::new("Server config")
+    .arg(
+        Arg::new("run_type")
+                .long("run_type")
+                .help("Sets the run type to use")
+                .required(true)
+                .value_parser(["webpki", "rustls-platform-verifier"])
+    );
+
+    // Gets a value for run_type if supplied by user
+    let matches = cmd.get_matches_mut();
+    let run_type: String = matches.get_one::<String>("run_type").expect("`run_type` is required").clone();
+
+    // Use the run_type value to call the appropriate function
+    let args: BenchArgs = envy::from_env::<BenchArgs>().unwrap().with_defaults();
+    run_configured_server(args, &run_type);
 }
