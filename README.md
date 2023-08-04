@@ -1,3 +1,5 @@
+# Project README Documentation
+
 Hello there! Welcome to my Microsoft Summer 2023 Intern Project! This README serves as the documentation for this project, outlining why this project exists, how to run it, as well as what to look at in the future.
 
 # Project Motivation
@@ -40,13 +42,19 @@ If we want to run against a self-hosted server, then we’ll have to run the fol
 # Run below in each terminal used for testing between a locally-run server and our client
 $env:WEBPKI_PORT="8443";$env:PLATFORM_PORT="8445";$env:ARG_HOSTNAME="localhost";$env:HTTP="false";$env:CAFILE="../rustls/test-ca/rsa/ca.cert";$env:WEBPKI_CERTS="../rustls/test-ca/rsa/end.fullchain";$env:PLATFORM_CERTS="./converted.pem";$env:WEBPKI_KEY="../rustls/test-ca/rsa/end.rsa";$env:PLATFORM_KEY="./privatekey.pem";$env:CMD_ECHO="true";$env:VERBOSE="false";$env:PORT="";$env:PROTOVER="";$env:SUITE="";$env:PROTO="";$env:MAX_FRAG_SIZE="";$env:NO_TICKETS="";$env:NO_SNI="";$env:INSECURE="";$env:AUTH_KEY="";$env:AUTH_CERTS="";$env:CMD_HTTP="";$env:CERTS="";$env:KEY="";$env:OCSP="";$env:AUTH="";$env:REQUIRE_AUTH="";$env:RESUMPTION="";$env:TICKETS="";$env:ARG_FPORT="";
 
-# Run the following two commands in separate terminals
+# Run the following three commands in separate terminals
 cargo run --bin tlsserver_mio -- --run_type webpki
 cargo run --bin tlsserver_mio -- --run_type rustls-platform-verifier
 cargo bench
 ```
 
-// Talk about how to get roots trusted on a Windows machine
+The certs for platform-verifier are test certs that we created in order for a connection to be established. Here’s how we can get these roots trusted on a Windows machine:
+
+1. Open the playserver_openssl2 file inside the repo.
+2. Follow the installation wizard and make sure to install the roots into Third-Party Root Certificates.
+3. To verify, press the Windows key and type in “Manage user certificates” and click on the first option.
+4. Go to Third-Party Root Certificates → Certificates
+5. Check that a new root has been added. It’ll be helpful to have this window up before doing the installation, but I figured writing this in reverse order would justify opening up this extra window haha.
 
 Note: Testing against this self-hosted server does not work for rust-native-tls at the moment and is a bug that should be fixed before further expanding this testing framework
 
